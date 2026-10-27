@@ -1,0 +1,39 @@
+# iOS için imzasız .ipa üretir. Windows'ta Sideloadly ile ücretsiz Apple ID kullanılarak
+# imzalanıp iPhone'a kurulur (7 günde bir yeniden kurulum gerekir).
+# macOS dakikaları pahalı olduğundan yalnızca elle tetiklenir: Actions → "iOS IPA" → Run workflow.
+name: iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+
+      - name: Bağımlılıklar
+        run: flutter pub get
+
+      # Debug derlemeler iOS'ta hata ayıklayıcı olmadan açılmaz; release şart.
+      - name: iOS derle (imzasız)
+        run: flutter build ios --release --no-codesign
+
+      - name: IPA paketle
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry msr-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msr-ios-unsigned
+          path: msr-unsigned.ipa
+          retention-days: 14

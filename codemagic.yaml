@@ -1,0 +1,26 @@
+# iOS için imzasız .ipa üretir (Codemagic, ücretsiz planda ayda 500 dk M2 Mac).
+# Windows'ta Sideloadly ile ücretsiz Apple ID kullanılarak imzalanıp iPhone'a kurulur
+# (7 günde bir yeniden kurulum gerekir). Tetikleme tanımlı değil: yalnızca elle başlatılır.
+workflows:
+  ios-unsigned:
+    name: iOS IPA (imzasız)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: 3.47.5
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Bağımlılıklar
+        script: flutter pub get
+      # Debug derlemeler iOS'ta hata ayıklayıcı olmadan açılmaz; release şart.
+      # flutter build, Podfile'ı görüp pod install'u kendisi çalıştırır.
+      - name: iOS derle (imzasız)
+        script: flutter build ios --release --no-codesign
+      - name: IPA paketle
+        script: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry msr-unsigned.ipa Payload
+    artifacts:
+      - msr-unsigned.ipa
